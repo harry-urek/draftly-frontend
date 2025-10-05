@@ -26,33 +26,52 @@ export const api = {
   // Generic request methods
   get: async (url: string) => {
     const idToken = await getIdToken();
+    if (!idToken) {
+      throw new Error("Not authenticated. Please log in.");
+    }
     const response = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${idToken}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+        "Content-Type": "application/json",
       },
-      credentials: 'include',
+      credentials: "include",
     });
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text().catch(() => "Unknown error");
+      throw new Error(
+        `HTTP error! status: ${response.status}, message: ${errorText}`
+      );
     }
     return response.json();
   },
 
   post: async (url: string, data?: unknown) => {
     const idToken = await getIdToken();
+    if (!idToken) {
+      throw new Error("Not authenticated. Please log in.");
+    }
+
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${idToken}`,
+    };
+
+    // Only set Content-Type if we have data
+    if (data) {
+      headers["Content-Type"] = "application/json";
+    }
+
     const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${idToken}`,
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
+      method: "POST",
+      headers,
+      credentials: "include",
       body: data ? JSON.stringify(data) : undefined,
     });
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text().catch(() => "Unknown error");
+      throw new Error(
+        `HTTP error! status: ${response.status}, message: ${errorText}`
+      );
     }
     return response.json();
   },
@@ -79,19 +98,19 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
 export async function syncEmails() {
   const idToken = await getIdToken();
   if (!idToken) {
-    throw new Error('Not authenticated');
+    throw new Error("Not authenticated");
   }
 
   const response = await fetch(api.syncEmails(), {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Authorization': `Bearer ${idToken}`,
-      'Content-Type': 'application/json'
-    }
+      Authorization: `Bearer ${idToken}`,
+      "Content-Type": "application/json",
+    },
   });
 
   if (!response.ok) {
-    throw new Error('Failed to sync emails');
+    throw new Error("Failed to sync emails");
   }
 
   return response.json();
@@ -99,7 +118,7 @@ export async function syncEmails() {
 
 // Helper function to get current user's ID token
 async function getIdToken(): Promise<string | null> {
-  const { auth } = await import('./firebase');
+  const { auth } = await import("./firebase");
   const user = auth.currentUser;
   return user ? await user.getIdToken() : null;
 }

@@ -77,13 +77,12 @@
     box-sizing: border-box;
 }
 
-html,
-body {
+html {
     height: 100%;
-    overflow: hidden;
 }
 
 body {
+    min-height: 100%;
     background-color: var(--background);
     color: var(--foreground);
     font-family: var(--font-geist-sans);
