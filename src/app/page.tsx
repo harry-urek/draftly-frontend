@@ -2,7 +2,7 @@
 
 import { useAppStore } from '@/lib/store'
 import { AuthButton } from '@/components/AuthButton'
-import { Mail, Shield, Zap } from 'lucide-react'
+import { Mail } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 

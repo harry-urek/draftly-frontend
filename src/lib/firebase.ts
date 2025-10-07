@@ -36,7 +36,7 @@ googleProvider.setCustomParameters({
   access_type: "offline",
 });
 
-export interface AuthUser extends User {}
+export type AuthUser = User;
 
 export const signInWithGoogle = async (): Promise<AuthUser | null> => {
   try {
