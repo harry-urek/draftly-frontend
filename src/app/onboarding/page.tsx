@@ -65,6 +65,13 @@ export default function OnboardingPage() {
                 router.push('/permissions')
             } else if (status === 'PROFILE_GENERATING') {
                 router.push('/onboarding/processing')
+            } else if (status === 'GMAIL_CONNECTED') {
+                // Ensure background email fetch begins when we hit this page
+                try {
+                    await api.post(api.onboarding.start())
+                } catch {
+                    // Non-blocking; ignore errors here
+                }
             }
 
             setIsLoading(false)

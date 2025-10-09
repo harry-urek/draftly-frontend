@@ -4,23 +4,24 @@ export const api = {
   // Auth endpoints
   login: () => `${API_BASE_URL}/auth/login`,
   logout: () => `${API_BASE_URL}/auth/logout`,
-  session: () => `${API_BASE_URL}/auth/session`,
+  // session endpoint replaced by status in new API
+  session: () => `${API_BASE_URL}/auth/status`,
 
-  // Email endpoints
-  emails: () => `${API_BASE_URL}/mail/messages`,
-  refreshEmails: () => `${API_BASE_URL}/mail/refresh`,
-  syncEmails: () => `${API_BASE_URL}/mail/sync`,
-  threads: (threadId: string) => `${API_BASE_URL}/threads/${threadId}`,
+  // Email endpoints (new API under /api/emails)
+  emails: () => `${API_BASE_URL}/api/emails`,
+  refreshEmails: () => `${API_BASE_URL}/api/emails/refresh`,
+  syncEmails: () => `${API_BASE_URL}/api/emails/sync`,
+  message: (id: string) => `${API_BASE_URL}/api/emails/${id}`,
 
-  // Send email
-  sendEmail: () => `${API_BASE_URL}/emails/send`,
+  // Send/draft email
+  sendEmail: () => `${API_BASE_URL}/api/emails/send`,
+  draftEmail: () => `${API_BASE_URL}/api/emails/draft`,
 
-  // Onboarding endpoints
+  // Onboarding endpoints (new API under /api/onboarding)
   onboarding: {
-    start: () => `${API_BASE_URL}/onboarding/start`,
-    status: () => `${API_BASE_URL}/onboarding/status`,
-    submit: () => `${API_BASE_URL}/onboarding/submit`,
-    profile: () => `${API_BASE_URL}/onboarding/profile`,
+    start: () => `${API_BASE_URL}/api/onboarding/start`,
+    status: () => `${API_BASE_URL}/api/onboarding/status`,
+    submit: () => `${API_BASE_URL}/api/onboarding/generate-profile`,
   },
 
   // Generic request methods

@@ -8,10 +8,12 @@ import Image from 'next/image'
 import InboxMessages from '@/components/InboxMessages'
 import Sidebar from '@/components/Sidebar'
 import EmailDetail from '@/components/EmailDetail'
-import { getIdToken } from '@/lib/firebase'
+import { api } from '@/lib/api'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 export default function InboxPage() {
-    const { user, setUser, selectedEmail, setSelectedEmail } = useAppStore()
+    const { user, setUser, selectedEmail, selectedThread, setSelectedEmail, setSelectedThread } = useAppStore()
     const router = useRouter()
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -24,23 +26,14 @@ export default function InboxPage() {
         }
     }, [user, router])
 
-    // Refresh user profile after OAuth redirect
+    // Refresh Gmail auth flag after OAuth redirect
     useEffect(() => {
         const refreshUserProfile = async () => {
-            if (user && !user.accessToken) {
+            if (user && !user.hasValidGmailAuth) {
                 try {
-                    const idToken = await getIdToken();
-                    if (idToken) {
-                        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-                            headers: { 'Authorization': `Bearer ${idToken}` }
-                        });
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data.user.accessToken) {
-                                setUser({ ...user, accessToken: data.user.accessToken });
-                            }
-                        }
-                    }
+                    // Ask /auth/status for latest Gmail connection
+                    const status = await api.get(api.session())
+                    setUser({ ...user, hasValidGmailAuth: Boolean(status.hasValidGmailAuth) })
                 } catch (error) {
                     console.error('Failed to refresh user profile:', error);
                 }
@@ -51,6 +44,9 @@ export default function InboxPage() {
 
     const handleLogout = async () => {
         try {
+            await api.post(api.logout());
+            setSelectedEmail(null);
+            setSelectedThread(null);
             setUser(null)
             router.push('/')
         } catch (error) {
@@ -102,15 +98,15 @@ export default function InboxPage() {
 
             {/* Fullscreen Main Content with Sidebar */}
             <main className="flex-1 overflow-hidden flex">
-                {user.accessToken ? (
+                {user.hasValidGmailAuth ? (
                     <>
                         {/* Sidebar */}
                         <Sidebar />
-
                         {/* Main Content Area */}
-                        {selectedEmail ? (
+            {selectedEmail ? (
                             <EmailDetail
-                                email={selectedEmail}
+                email={selectedEmail}
+                thread={selectedThread || undefined}
                                 onClose={() => setSelectedEmail(null)}
                             />
                         ) : (
@@ -118,18 +114,16 @@ export default function InboxPage() {
                         )}
                     </>
                 ) : (
-                    <div className="flex items-center justify-center h-full w-full">
-                        <div className="text-center bg-white rounded-lg border border-border p-8 shadow-sm max-w-md">
-                            <h2 className="text-xl font-semibold mb-3 text-foreground" style={{ fontFamily: 'var(--font-geist-sans)' }}>Connect your Gmail</h2>
-                            <p className="mb-6 text-muted-foreground text-sm" style={{ fontFamily: 'var(--font-geist-sans)' }}>Connect your Gmail account to start using Draftly.</p>
-                            <button
-                                onClick={handleConnectGmail}
-                                className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-all font-semibold shadow-sm w-full"
-                                style={{ fontFamily: 'var(--font-geist-sans)' }}
-                            >
-                                Connect Gmail
-                            </button>
-                        </div>
+                    <div className="flex items-center justify-center h-full w-full p-4">
+                        <Card className="max-w-md w-full text-center">
+                            <CardContent className="p-8">
+                                <h2 className="text-xl font-semibold mb-2 text-foreground" style={{ fontFamily: 'var(--font-geist-sans)' }}>Connect your Gmail</h2>
+                                <p className="mb-6 text-muted-foreground text-sm" style={{ fontFamily: 'var(--font-geist-sans)' }}>
+                                    Connect your Gmail account to start using Draftly.
+                                </p>
+                                <Button onClick={handleConnectGmail} className="w-full">Connect Gmail</Button>
+                            </CardContent>
+                        </Card>
                     </div>
                 )}
             </main>

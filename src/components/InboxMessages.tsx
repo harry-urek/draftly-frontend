@@ -13,10 +13,40 @@ import {
   TrashIcon,
   EllipsisVerticalIcon
 } from '@heroicons/react/24/outline';
+import { Button } from '@/components/ui/button'
 
 export default function InboxMessages() {
-  const { user, emails, setEmails, selectedEmail, setSelectedEmail, isLoading, setLoading, error, setError } = useAppStore();
+  const { user, emails, setEmails, selectedEmail, setSelectedEmail, setSelectedThread, isLoading, setLoading, error, setError } = useAppStore();
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Normalize server responses from either legacy (messages array) or new (threads in data)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const normalizeInboxResponse = (data: any) => {
+    // Legacy shape: { messages: GmailMessage[] }
+    if (Array.isArray(data?.messages)) return data.messages;
+
+    // New shape: { success: true, data: EmailThread[] }
+  const threads = Array.isArray(data?.data) ? data.data : [];
+  const stripHtml = (html: string) => html?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const list = threads.flatMap((t: any) => {
+      const m = t?.messages?.[0]; // latest message preview per repository
+      if (!m) return [];
+      return [{
+        id: m.id,
+    threadId: t.id, // use DB thread id for detail endpoint
+        subject: t.subject || m.subject || "",
+        from: m.from || "",
+        to: m.to || "",
+        date: (m.date || m.timestamp || new Date().toISOString()),
+        snippet: m.snippet || (m.body ? stripHtml(m.body).slice(0, 160) : ""),
+        isUnread: Boolean(m.isUnread),
+      }];
+    });
+
+    return list;
+  };
 
   const fetchMessages = useCallback(async () => {
     if (!user) return;
@@ -44,7 +74,7 @@ export default function InboxMessages() {
       }
 
       const data = await response.json();
-      setEmails(data.messages || []);
+      setEmails(normalizeInboxResponse(data));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -75,7 +105,7 @@ export default function InboxMessages() {
       }
 
       const data = await response.json();
-      setEmails(data.messages || []);
+      setEmails(normalizeInboxResponse(data));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -135,6 +165,19 @@ export default function InboxMessages() {
     return match ? match[1].trim().replace(/"/g, '') : extractEmail(fromString);
   };
 
+  const openThread = useCallback(async (threadId: string) => {
+    try {
+      setLoading(true);
+      const data = await api.get(api.message(threadId));
+      // Expecting { success: true, data: { id, subject, messages: [...] } }
+      setSelectedThread(data?.data || null);
+    } catch (e) {
+      console.error('Failed to load thread:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [setLoading, setSelectedThread]);
+
   if (error) {
     return (
       <div className="h-full flex items-center justify-center px-6">
@@ -169,15 +212,9 @@ export default function InboxMessages() {
             ({emails.length})
           </span>
         </h1>
-        <button
-          onClick={refreshMessages}
-          disabled={isLoading}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-muted rounded transition-colors disabled:opacity-50"
-          style={{ fontFamily: 'var(--font-geist-sans)' }}
-        >
-          <ArrowPathIcon className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <Button onClick={refreshMessages} disabled={isLoading} variant="outline" size="sm" className="gap-2">
+          <ArrowPathIcon className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
+        </Button>
       </div>
 
       {/* Message List */}
@@ -195,8 +232,8 @@ export default function InboxMessages() {
               <div
                 key={message.id}
                 className={`group px-4 py-2.5 border-b border-border cursor-pointer transition-colors ${message.isUnread
-                    ? 'bg-white hover:bg-muted border-l-2 border-l-primary'
-                    : 'bg-white hover:bg-muted border-l-2 border-l-transparent'
+                  ? 'bg-white hover:bg-muted border-l-2 border-l-primary'
+                  : 'bg-white hover:bg-muted border-l-2 border-l-transparent'
                   } ${selectedEmail?.id === message.id ? 'bg-muted' : ''}`}
               >
                 <div className="flex items-start gap-3">
@@ -212,7 +249,10 @@ export default function InboxMessages() {
                   {/* Message content */}
                   <div
                     className="flex-1 min-w-0"
-                    onClick={() => setSelectedEmail(message)}
+                    onClick={() => {
+                      setSelectedEmail(message);
+                      if (message.threadId) openThread(message.threadId);
+                    }}
                   >
                     {/* Sender and time */}
                     <div className="flex items-center justify-between gap-2 mb-0.5">

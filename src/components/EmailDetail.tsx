@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  ArrowLeftIcon,
   StarIcon,
   ArchiveBoxIcon,
   TrashIcon,
@@ -14,19 +13,14 @@ import {
 } from '@heroicons/react/24/outline';
 import { useState } from 'react';
 
+type Message = { id: string; from: string; subject: string; date?: string; snippet?: string; body?: string; htmlBody?: string; timestamp?: string | Date }
 interface EmailDetailProps {
-  email: {
-    id: string;
-    from: string;
-    subject: string;
-    date: string;
-    snippet: string;
-    body?: string;
-  };
+  email: { id: string; from: string; subject: string; date: string; snippet: string };
+  thread?: { subject: string; messages: Message[] };
   onClose: () => void;
 }
 
-export default function EmailDetail({ email, onClose }: EmailDetailProps) {
+export default function EmailDetail({ email, thread, onClose }: EmailDetailProps) {
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState('');
 
@@ -57,12 +51,23 @@ export default function EmailDetail({ email, onClose }: EmailDetailProps) {
   };
 
   const getInitials = (name: string) => {
-    const parts = name.split(' ');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
     return name.substring(0, 2).toUpperCase();
   };
+
+  // Normalize messages to a single shape
+  const messages: Message[] = thread
+    ? thread.messages
+    : [
+        {
+          id: email.id,
+          from: email.from,
+          subject: email.subject,
+          snippet: email.snippet,
+          timestamp: email.date,
+        },
+      ];
 
   return (
     <div className="flex-1 flex flex-col bg-white overflow-hidden">
@@ -72,7 +77,6 @@ export default function EmailDetail({ email, onClose }: EmailDetailProps) {
           onClick={onClose}
           className="px-3 py-1.5 text-xs hover:bg-muted rounded transition-colors flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeftIcon className="h-3.5 w-3.5" />
           Back
         </button>
 
@@ -98,65 +102,59 @@ export default function EmailDetail({ email, onClose }: EmailDetailProps) {
           {/* Subject */}
           <div className="mb-4">
             <h1 className="text-lg font-semibold text-foreground px-3 py-2" style={{ fontFamily: 'var(--font-geist-sans)' }}>
-              {email.subject}
+              {thread?.subject || email.subject}
             </h1>
           </div>
-
-          {/* Email Message Card */}
-          <div className="bg-white rounded border border-border shadow-sm mb-4">
-            {/* Sender Header */}
-            <div className="p-4 border-b border-border">
-              <div className="flex items-start gap-3">
-                {/* Avatar */}
-                <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm flex-shrink-0">
-                  {getInitials(extractName(email.from))}
-                </div>
-
-                {/* Sender Info */}
-                <div className="flex-1 min-w-0" style={{ fontFamily: 'var(--font-geist-sans)' }}>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="font-semibold text-foreground text-sm">{extractName(email.from)}</div>
-                      <div className="text-xs text-muted-foreground">{extractEmail(email.from)}</div>
+          {messages.map((msg) => (
+            <div key={msg.id} className="bg-white rounded border border-border shadow-sm mb-4">
+              {/* Sender Header */}
+              <div className="p-4 border-b border-border">
+                <div className="flex items-start gap-3">
+                  {/* Avatar */}
+                  <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                    {getInitials(extractName(msg.from))}
+                  </div>
+                  {/* Sender Info */}
+                  <div className="flex-1 min-w-0" style={{ fontFamily: 'var(--font-geist-sans)' }}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="font-semibold text-foreground text-sm">{extractName(msg.from)}</div>
+                        <div className="text-xs text-muted-foreground">{extractEmail(msg.from)}</div>
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatDate(((msg.timestamp as string) || (msg.date as string) || '') as string)}
+                      </span>
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDate(email.date)}
-                    </span>
+                  </div>
+                  {/* Quick Actions */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      className="p-1.5 hover:bg-muted rounded transition-colors text-muted-foreground hover:text-primary"
+                      onClick={() => setShowReply(true)}
+                      title="Reply"
+                    >
+                      <ArrowUturnLeftIcon className="h-3.5 w-3.5" />
+                    </button>
+                    <button className="p-1.5 hover:bg-muted rounded transition-colors text-muted-foreground hover:text-primary" title="Forward">
+                      <ArrowUturnRightIcon className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
-
-                {/* Quick Actions */}
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <button
-                    className="p-1.5 hover:bg-muted rounded transition-colors text-muted-foreground hover:text-primary"
-                    onClick={() => setShowReply(true)}
-                    title="Reply"
-                  >
-                    <ArrowUturnLeftIcon className="h-3.5 w-3.5" />
-                  </button>
-                  <button className="p-1.5 hover:bg-muted rounded transition-colors text-muted-foreground hover:text-primary" title="Forward">
-                    <ArrowUturnRightIcon className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+              </div>
+              {/* Email Body */}
+              <div className="p-4" style={{ fontFamily: 'var(--font-geist-sans)' }}>
+                <div
+                  className="text-sm leading-relaxed text-foreground prose prose-sm max-w-none"
+                  style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                  dangerouslySetInnerHTML={{
+                    __html: String(msg.htmlBody || msg.body || msg.snippet || '')
+                      .replace(/<style[^>]*>.*?<\/style>/gi, '')
+                      .replace(/<script[^>]*>.*?<\/script>/gi, '')
+                  }}
+                />
               </div>
             </div>
-
-            {/* Email Body */}
-            <div className="p-4" style={{ fontFamily: 'var(--font-geist-sans)' }}>
-              <div
-                className="text-sm leading-relaxed text-foreground prose prose-sm max-w-none"
-                style={{
-                  wordBreak: 'break-word',
-                  overflowWrap: 'break-word'
-                }}
-                dangerouslySetInnerHTML={{
-                  __html: (email.body || email.snippet)
-                    .replace(/<style[^>]*>.*?<\/style>/gi, '') // Remove style tags
-                    .replace(/<script[^>]*>.*?<\/script>/gi, '') // Remove script tags for security
-                }}
-              />
-            </div>
-          </div>
+          ))}
 
           {/* Reply Section Box */}
           {showReply ? (

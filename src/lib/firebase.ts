@@ -84,7 +84,7 @@ export const signOut = async (): Promise<void> => {
     const idToken = await auth.currentUser?.getIdToken();
 
     if (idToken) {
-      await fetch(`${API_BASE_URL}/auth/session/logout`, {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${idToken}`,
