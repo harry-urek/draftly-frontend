@@ -60,14 +60,14 @@ export default function EmailDetail({ email, thread, onClose }: EmailDetailProps
   const messages: Message[] = thread
     ? thread.messages
     : [
-        {
-          id: email.id,
-          from: email.from,
-          subject: email.subject,
-          snippet: email.snippet,
-          timestamp: email.date,
-        },
-      ];
+      {
+        id: email.id,
+        from: email.from,
+        subject: email.subject,
+        snippet: email.snippet,
+        timestamp: email.date,
+      },
+    ];
 
   return (
     <div className="flex-1 flex flex-col bg-white overflow-hidden">

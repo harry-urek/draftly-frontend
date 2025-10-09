@@ -103,11 +103,11 @@ export default function InboxPage() {
                         {/* Sidebar */}
                         <Sidebar />
                         {/* Main Content Area */}
-            {selectedEmail ? (
+                        {selectedEmail ? (
                             <EmailDetail
-                email={selectedEmail}
-                thread={selectedThread || undefined}
-                                onClose={() => setSelectedEmail(null)}
+                                email={selectedEmail}
+                                thread={selectedThread || undefined}
+                                onClose={() => { setSelectedEmail(null); setSelectedThread(null); }}
                             />
                         ) : (
                             <InboxMessages />

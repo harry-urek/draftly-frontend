@@ -26,16 +26,16 @@ export default function InboxMessages() {
     if (Array.isArray(data?.messages)) return data.messages;
 
     // New shape: { success: true, data: EmailThread[] }
-  const threads = Array.isArray(data?.data) ? data.data : [];
-  const stripHtml = (html: string) => html?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const threads = Array.isArray(data?.data) ? data.data : [];
+    const stripHtml = (html: string) => html?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const list = threads.flatMap((t: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const list = threads.flatMap((t: any) => {
       const m = t?.messages?.[0]; // latest message preview per repository
       if (!m) return [];
       return [{
         id: m.id,
-    threadId: t.id, // use DB thread id for detail endpoint
+        threadId: t.id, // use DB thread id for detail endpoint
         subject: t.subject || m.subject || "",
         from: m.from || "",
         to: m.to || "",
