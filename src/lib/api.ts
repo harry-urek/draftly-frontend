@@ -2,7 +2,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export const api = {
   // Auth endpoints
-  login: () => `${API_BASE_URL}/auth/login`,
+  login: () => `${API_BASE_URL}/auth/register`,
+  register: () => `${API_BASE_URL}/auth/register`,
   logout: () => `${API_BASE_URL}/auth/logout`,
   // session endpoint replaced by status in new API
   session: () => `${API_BASE_URL}/auth/status`,
@@ -12,9 +13,15 @@ export const api = {
   refreshEmails: () => `${API_BASE_URL}/api/emails/refresh`,
   syncEmails: () => `${API_BASE_URL}/api/emails/sync`,
   message: (id: string) => `${API_BASE_URL}/api/emails/${id}`,
+  replyToThread: (id: string) => `${API_BASE_URL}/api/emails/${id}/reply`,
+  drafts: () => `${API_BASE_URL}/api/emails/drafts`,
+  // Suggested replies
+  suggest: () => `${API_BASE_URL}/api/emails/suggest`,
+  suggested: (id: string) => `${API_BASE_URL}/api/emails/${id}/suggested`,
 
   // Send/draft email
   sendEmail: () => `${API_BASE_URL}/api/emails/send`,
+  sendNewEmail: () => `${API_BASE_URL}/api/emails/new`,
   draftEmail: () => `${API_BASE_URL}/api/emails/draft`,
 
   // Onboarding endpoints (new API under /api/onboarding)

@@ -58,7 +58,7 @@ export default function OnboardingPage() {
             setOnboardingStatus(status)
 
             // Redirect based on status
-            if (status === 'ACTIVE') {
+            if (status === 'ACTIVE' || status === 'COMPLETED_INIT_PROFILE' || status === 'PROFILE_DONE') {
                 router.push('/inbox')
             } else if (status === 'NOT_STARTED') {
                 // User hasn't connected Gmail yet

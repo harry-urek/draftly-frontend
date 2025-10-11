@@ -1,7 +1,7 @@
 'use client'
 
 import { useAppStore } from '@/lib/store'
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Mail, LogOut } from 'lucide-react'
 import Image from 'next/image'
@@ -11,9 +11,16 @@ import EmailDetail from '@/components/EmailDetail'
 import { api } from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import RichTextEditor, { isHtmlEmpty, sanitizeHtml, plainTextToHtml } from '@/components/RichTextEditor'
 
 export default function InboxPage() {
     const { user, setUser, selectedEmail, selectedThread, setSelectedEmail, setSelectedThread } = useAppStore()
+    const [activeFolder, setActiveFolder] = React.useState<'inbox' | 'drafts' | 'sent' | 'archive' | 'trash' | 'starred'>('inbox')
+    const [showCompose, setShowCompose] = React.useState(false)
+    const [composeTo, setComposeTo] = React.useState('')
+    const [composeSubject, setComposeSubject] = React.useState('')
+    const [composeBody, setComposeBody] = React.useState('')
+    const [sending, setSending] = React.useState(false)
     const router = useRouter()
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -33,7 +40,14 @@ export default function InboxPage() {
                 try {
                     // Ask /auth/status for latest Gmail connection
                     const status = await api.get(api.session())
-                    setUser({ ...user, hasValidGmailAuth: Boolean(status.hasValidGmailAuth) })
+                    setUser({
+                        ...user,
+                        hasValidGmailAuth: Boolean(status.hasValidGmailAuth),
+                        needsGmailAuth: Boolean(status.needsGmailAuth),
+                        needsOnboarding: Boolean(status.needsOnboarding),
+                        onboardingStatus: status.onboardingStatus,
+                        redirectToInbox: Boolean(status.redirectToInbox),
+                    })
                 } catch (error) {
                     console.error('Failed to refresh user profile:', error);
                 }
@@ -101,7 +115,7 @@ export default function InboxPage() {
                 {user.hasValidGmailAuth ? (
                     <>
                         {/* Sidebar */}
-                        <Sidebar />
+                        <Sidebar active={activeFolder} onSelect={(key) => setActiveFolder(key)} onCompose={() => setShowCompose(true)} />
                         {/* Main Content Area */}
                         {selectedEmail ? (
                             <EmailDetail
@@ -110,7 +124,36 @@ export default function InboxPage() {
                                 onClose={() => { setSelectedEmail(null); setSelectedThread(null); }}
                             />
                         ) : (
-                            <InboxMessages />
+                            <div className="flex-1 flex">
+                                <div className="flex-1">
+                                    <InboxMessages />
+                                </div>
+                                {showCompose && (
+                                    <div className="w-full max-w-xl border-l border-border bg-white flex flex-col">
+                                        <div className="p-3 border-b border-border flex items-center justify-between">
+                                            <h3 className="text-sm font-semibold">New message</h3>
+                                            <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowCompose(false)}>Close</button>
+                                        </div>
+                                        <div className="p-3 space-y-2">
+                                            <input value={composeTo} onChange={(e) => setComposeTo(e.target.value)} placeholder="To" className="w-full text-sm border border-border rounded px-2 py-1" />
+                                            <input value={composeSubject} onChange={(e) => setComposeSubject(e.target.value)} placeholder="Subject" className="w-full text-sm border border-border rounded px-2 py-1" />
+                                            <RichTextEditor value={composeBody} onChange={setComposeBody} placeholder="Write your message…" />
+                                        </div>
+                                        <div className="p-3 border-t border-border flex items-center justify-between">
+                                            <Button size="sm" onClick={async () => {
+                                                if (!composeTo || !composeSubject || isHtmlEmpty(composeBody)) return;
+                                                try {
+                                                    setSending(true);
+                                                    const bodyHtml = sanitizeHtml(composeBody) || plainTextToHtml(composeBody);
+                                                    await api.post(api.sendNewEmail(), { to: composeTo, subject: composeSubject, body: bodyHtml });
+                                                    setComposeTo(''); setComposeSubject(''); setComposeBody(''); setShowCompose(false);
+                                                } finally { setSending(false); }
+                                            }} disabled={sending || !composeTo || !composeSubject || isHtmlEmpty(composeBody)}>Send</Button>
+                                            <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowCompose(false)}>Discard</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </>
                 ) : (

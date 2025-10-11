@@ -23,7 +23,7 @@ export default function ProcessingPage() {
 
                 setStatus(newStatus)
 
-                if (newStatus === 'ACTIVE') {
+                if (newStatus === 'ACTIVE' || newStatus === 'COMPLETED_INIT_PROFILE' || newStatus === 'PROFILE_DONE') {
                     clearInterval(statusInterval)
                     clearInterval(dotsInterval)
                     router.push('/inbox')
@@ -103,6 +103,8 @@ export default function ProcessingPage() {
                             <p className="text-sm text-gray-500">
                                 {status === 'PROFILE_GENERATING'
                                     ? 'AI is analyzing your unique writing style...'
+                                    : status === 'COMPLETED_INIT_PROFILE'
+                                    ? 'Finishing touches before your profile is live...'
                                     : 'Almost done...'}
                             </p>
                         </div>

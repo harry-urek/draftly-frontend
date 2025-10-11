@@ -7,6 +7,10 @@ interface User {
   picture?: string;
   // Whether the server reports a valid Gmail OAuth connection
   hasValidGmailAuth?: boolean;
+  needsGmailAuth?: boolean;
+  needsOnboarding?: boolean;
+  onboardingStatus?: string;
+  redirectToInbox?: boolean;
   // Deprecated: previously used to gate UI; prefer hasValidGmailAuth
   accessToken?: string;
 }
@@ -30,6 +34,7 @@ interface ThreadMessage {
   subject: string;
   body?: string;
   htmlBody?: string;
+  snippet?: string;
   timestamp: string | Date;
   isUnread: boolean;
 }
@@ -48,6 +53,10 @@ interface AppState {
   emails: Email[];
   selectedEmail: Email | null;
   selectedThread: EmailThread | null;
+  suggestedReplies: Record<
+    string,
+    { content: string; tone?: string; createdAt: string }
+  >;
   isLoading: boolean;
   error: string | null;
 
@@ -56,8 +65,13 @@ interface AppState {
   setEmails: (emails: Email[]) => void;
   setSelectedEmail: (email: Email | null) => void;
   setSelectedThread: (thread: EmailThread | null) => void;
+  setSuggestedReply: (
+    threadId: string,
+    payload: { content: string; tone?: string; createdAt: string } | null
+  ) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  updateThread: (thread: EmailThread) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -65,6 +79,7 @@ export const useAppStore = create<AppState>((set) => ({
   emails: [],
   selectedEmail: null,
   selectedThread: null,
+  suggestedReplies: {},
   isLoading: false,
   error: null,
 
@@ -72,6 +87,51 @@ export const useAppStore = create<AppState>((set) => ({
   setEmails: (emails) => set({ emails }),
   setSelectedEmail: (email) => set({ selectedEmail: email }),
   setSelectedThread: (thread) => set({ selectedThread: thread }),
+  setSuggestedReply: (threadId, payload) =>
+    set((state) => {
+      const next = { ...state.suggestedReplies };
+      if (payload) next[threadId] = payload;
+      else delete next[threadId];
+      return { suggestedReplies: next };
+    }),
   setLoading: (loading) => set({ isLoading: loading }),
   setError: (error) => set({ error }),
+  updateThread: (thread) =>
+    set((state) => {
+      const latest = thread.messages[thread.messages.length - 1];
+      const updatedEmails = state.emails.map((email) => {
+        if (email.threadId !== thread.id || !latest) {
+          return email;
+        }
+
+        const rawSnippet =
+          latest.snippet ||
+          (latest.body
+            ? latest.body
+                .replace(/<[^>]+>/g, " ")
+                .replace(/\s+/g, " ")
+                .trim()
+            : "");
+
+        const timestamp =
+          typeof latest.timestamp === "string"
+            ? latest.timestamp
+            : latest.timestamp instanceof Date
+            ? latest.timestamp.toISOString()
+            : new Date().toISOString();
+
+        return {
+          ...email,
+          subject: thread.subject || latest.subject || email.subject,
+          snippet: rawSnippet || email.snippet,
+          date: timestamp,
+          isUnread: false,
+        };
+      });
+
+      return {
+        emails: updatedEmails,
+        selectedThread: thread,
+      };
+    }),
 }));

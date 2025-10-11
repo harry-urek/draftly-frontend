@@ -15,6 +15,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (firebaseUser) {
                 // Convert Firebase user to our user format
                 try {
+                    // Ensure backend user record exists and capture initial onboarding state
+                    const registerResponse = await api.post(api.register())
                     // Ask backend for auth status to know Gmail connection and onboarding state
                     const status = await api.get(api.session())
                     setUser({
@@ -23,6 +25,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         name: firebaseUser.displayName || '',
                         picture: firebaseUser.photoURL || undefined,
                         hasValidGmailAuth: Boolean(status.hasValidGmailAuth),
+                        needsGmailAuth: Boolean(
+                            status.needsGmailAuth ?? registerResponse?.needsGmailAuth
+                        ),
+                        needsOnboarding: Boolean(
+                            status.needsOnboarding ?? registerResponse?.needsOnboarding
+                        ),
+                        onboardingStatus:
+                            status.onboardingStatus ?? registerResponse?.onboardingStatus,
+                        redirectToInbox: Boolean(
+                            status.redirectToInbox ?? registerResponse?.redirectToInbox
+                        ),
                     })
                 } catch {
                     // Fallback to minimal user if status fetch fails

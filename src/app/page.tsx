@@ -15,8 +15,29 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    if (user) {
+    if (!user) {
+      return
+    }
+
+    const status = user.onboardingStatus
+
+    if (user.redirectToInbox || status === 'COMPLETED_INIT_PROFILE' || status === 'PROFILE_DONE' || status === 'ACTIVE') {
       router.push('/inbox')
+      return
+    }
+
+    if (user.needsGmailAuth || status === 'NOT_STARTED') {
+      router.push('/permissions')
+      return
+    }
+
+    if (status === 'PROFILE_GENERATING') {
+      router.push('/onboarding/processing')
+      return
+    }
+
+    if (user.needsOnboarding || status === 'GMAIL_CONNECTED' || status === 'QUESTIONNAIRE_IN_PROGRESS' || status === 'QUESTIONNAIRE_COMPLETED') {
+      router.push('/onboarding')
     }
   }, [user, router])
 

@@ -16,7 +16,7 @@ import {
 import { Button } from '@/components/ui/button'
 
 export default function InboxMessages() {
-  const { user, emails, setEmails, selectedEmail, setSelectedEmail, setSelectedThread, isLoading, setLoading, error, setError } = useAppStore();
+  const { user, emails, setEmails, selectedEmail, setSelectedEmail, setSelectedThread, isLoading, setLoading, error, setError, setSuggestedReply } = useAppStore();
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Normalize server responses from either legacy (messages array) or new (threads in data)
@@ -171,12 +171,18 @@ export default function InboxMessages() {
       const data = await api.get(api.message(threadId));
       // Expecting { success: true, data: { id, subject, messages: [...] } }
       setSelectedThread(data?.data || null);
+      if (data?.suggestedReply) {
+        setSuggestedReply(threadId, data.suggestedReply);
+      } else {
+        // Fire-and-forget: trigger suggestion generation
+        void api.post(api.suggest(), { threadId }).catch(() => {});
+      }
     } catch (e) {
       console.error('Failed to load thread:', e);
     } finally {
       setLoading(false);
     }
-  }, [setLoading, setSelectedThread]);
+  }, [setLoading, setSelectedThread, setSuggestedReply]);
 
   if (error) {
     return (
@@ -251,7 +257,11 @@ export default function InboxMessages() {
                     className="flex-1 min-w-0"
                     onClick={() => {
                       setSelectedEmail(message);
-                      if (message.threadId) openThread(message.threadId);
+                      // Only fetch if it's a different thread than currently selected
+                      if (message.threadId) {
+                        setSelectedThread(null);
+                        openThread(message.threadId);
+                      }
                     }}
                   >
                     {/* Sender and time */}
