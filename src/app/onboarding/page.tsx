@@ -4,20 +4,18 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { QuestionnaireForm } from '@/components/QuestionnaireForm'
-
-interface QuestionnaireData {
-    writingTone: string[]
-    formalityLevel: string
-    emailLength: string
-    greetingStyle: string
-    urgentRequestResponse: string
-    meetingScheduleResponse: string
-    feedbackResponse: string
-    commonPhrases: string[]
-    avoidPhrases: string[]
-    signOffStyle: string
-    emojiUsage: string
-    punctuationStyle: string
+type Profession = 'Software Developer' | 'HR Professional' | 'Legal Counsel' | 'Finance Analyst' | 'Marketing Professional'
+interface FoundationalAnswers {
+    goal: 'Task-Oriented' | 'Person-Oriented' | 'Analytical' | ''
+    formality: 1 | 2 | 3 | 4 | 5 | 0
+    fragmentChoice: 'A' | 'B' | 'C' | ''
+    marketingVoice?: 'Authoritative' | 'Friendly' | 'Playful' | 'Minimalist' | ''
+}
+interface QuestionnairePayloadV2 {
+    protocolVersion: 'v2'
+    profession: Profession
+    foundational: FoundationalAnswers
+    scenarios: Array<{ id: string; prompt: string; response: string }>
 }
 
 export default function OnboardingPage() {
@@ -90,60 +88,17 @@ export default function OnboardingPage() {
         }
     }
 
-    const handleSubmitQuestionnaire = async (data: QuestionnaireData) => {
+    const handleSubmitQuestionnaire = async (data: QuestionnairePayloadV2) => {
         setIsSubmitting(true)
         try {
-            // Transform frontend data structure to match backend expectations
-            const backendPayload = {
-                userId: '', // Will be filled by backend from auth token
-                submissionTimestamp: new Date().toISOString(),
-                stylePreferences: {
-                    greeting: data.greetingStyle,
-                    formalityScale: mapFormalityToScale(data.formalityLevel),
-                    requestStyle: data.emailLength,
-                    emojiFrequency: data.emojiUsage,
-                },
-                scenarioResponses: [
-                    {
-                        scenarioId: 'urgent_request',
-                        responseText: data.urgentRequestResponse,
-                    },
-                    {
-                        scenarioId: 'meeting_schedule',
-                        responseText: data.meetingScheduleResponse,
-                    },
-                    {
-                        scenarioId: 'feedback',
-                        responseText: data.feedbackResponse,
-                    },
-                ],
-                stylisticNuances: {
-                    commonSignOffs: [data.signOffStyle],
-                    commonPhrases: data.commonPhrases,
-                    petPeeve: data.avoidPhrases.join(', '),
-                    writingTone: data.writingTone,
-                    punctuationStyle: data.punctuationStyle,
-                },
-            }
-
-            await api.post(api.onboarding.submit(), backendPayload)
+            // Submit the new v2 questionnaire payload directly
+            await api.post(api.onboarding.submit(), data)
             router.push('/onboarding/processing')
         } catch (error) {
             console.error('Failed to submit questionnaire:', error)
             alert('Failed to submit questionnaire. Please try again.')
             setIsSubmitting(false)
         }
-    }
-
-    // Helper function to map formality level to numeric scale
-    const mapFormalityToScale = (level: string): number => {
-        const mapping: Record<string, number> = {
-            'very-formal': 5,
-            'formal': 4,
-            'neutral': 3,
-            'casual': 2,
-        }
-        return mapping[level] || 3
     }
 
     if (isLoading || !authChecked) {
